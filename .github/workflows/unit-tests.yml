@@ -1,0 +1,48 @@
+name: PHP Unit Tests
+
+# Only run this action when pushing to main or on pull requests (creation, synchronisation, and reopening).
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+
+# Cancel running jobs that have become stale through updates to the ref (e.g., pushes to a pull request).
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    phpunit:
+        name: PHPUnit
+        runs-on: ubuntu-latest
+
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v4
+
+            -   name: Install PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: '8.3'
+                    extensions: calendar, curl, intl, opcache, pdo_sqlite, sqlite3, zip, memcached
+
+            -   name: Setup problem matchers for PHPUnit
+                run: echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
+
+            -   name: Install dependencies with Composer
+                uses: ramsey/composer-install@v3
+
+            -   name: Extract configuration files
+                run: |
+                    cp config/autoload/doctrine.local.development.php.dist config/autoload/doctrine.local.php
+                    cp config/autoload/laminas-developer-tools.local.php.dist config/autoload/laminas-developer-tools.local.php
+                    cp config/autoload/local.development.php.dist config/autoload/local.php
+
+            -   name: Load environment variables
+                uses: c-py/action-dotenv-to-setenv@v3
+                with:
+                    env-file: .env.dist
+
+            -   name: Run PHPUnit
+                run: vendor/phpunit/phpunit/phpunit --bootstrap bootstrap.php --configuration phpunit.xml

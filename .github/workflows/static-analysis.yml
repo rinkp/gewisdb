@@ -1,0 +1,175 @@
+name: PHP Static Analysis
+
+# Only run this action on pull requests (creation, synchronisation, and reopening).
+on: [pull_request]
+
+# Cancel running jobs that have become stale through updates to the ref (e.g., pushes to a pull request).
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    phpstan:
+        name: PHPStan
+        runs-on: ubuntu-latest
+
+        # Create a Postgres service.
+        services:
+            postgres:
+                image: postgres
+                env:
+                    POSTGRES_PASSWORD: gewisdb
+                    POSTGRES_USER: gewisdb
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+
+        steps:
+            -   name: Checkout head branch
+                uses: actions/checkout@v4
+
+            -   name: Install PostgreSQL client
+                run: |
+                    sudo apt-get update
+                    sudo apt-get install --yes --no-install-recommends postgresql-client
+
+            -   name: Install PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: '8.3'
+                    extensions: calendar, curl, intl, opcache, pgsql, pdo_pgsql, zip, memcached, xdebug
+                    tools: cs2pr
+
+            -   name: Extract configuration files
+                run: |
+                    cp config/autoload/doctrine.local.development.php.dist config/autoload/doctrine.local.php
+                    cp config/autoload/laminas-developer-tools.local.php.dist config/autoload/laminas-developer-tools.local.php
+                    cp config/autoload/local.development.php.dist config/autoload/local.php
+
+            -   name: Check out main
+                run: |
+                    git config --global url."https://github.com/".insteadOf git@github.com:
+                    git config --global url."https://".insteadOf git://
+                    git fetch --all
+                    git update-ref refs/heads/temp-phpstanpr refs/remotes/origin/main
+                    git checkout --detach temp-phpstanpr
+
+            -   name: Install dependencies with Composer
+                uses: ramsey/composer-install@v3
+
+            -   name: Load environment variables
+                uses: c-py/action-dotenv-to-setenv@v3
+                with:
+                    env-file: .env.dist
+
+            -   name: Create databases
+                env:
+                    DOCTRINE_DEFAULT_HOST: 127.0.0.1
+                    DOCTRINE_REPORT_HOST: 127.0.0.1
+                    PGPASSWORD: gewisdb
+                run: |
+                    psql -h $DOCTRINE_REPORT_HOST -p 5432 -U gewisdb -c "CREATE DATABASE $DOCTRINE_REPORT_DATABASE"
+                    ./orm orm:schema-tool:update --force --no-interaction --complete
+                    EM_ALIAS=orm_report ./orm orm:schema-tool:update --force --no-interaction --complete
+
+            -   name: Generate PHPStan Baseline
+                env:
+                    DOCTRINE_DEFAULT_HOST: 127.0.0.1
+                    DOCTRINE_REPORT_HOST: 127.0.0.1
+                run: |
+                    echo "" > phpstan/phpstan-baseline.neon
+                    echo "" > phpstan/phpstan-baseline-pr.neon
+                    vendor/bin/phpstan analyse -c phpstan.neon --generate-baseline phpstan/phpstan-baseline-temp.neon --memory-limit 1G --no-progress
+
+            -   name: Check out new branch
+                run: |
+                    git checkout -- phpstan/phpstan-baseline.neon
+                    git checkout --theirs -- config/modules.config.php
+                    git checkout -
+
+            -   name: Install dependencies with Composer
+                uses: ramsey/composer-install@v3
+
+            -   name: Load environment variables
+                uses: c-py/action-dotenv-to-setenv@v3
+                with:
+                    env-file: .env.dist
+
+            -   name: Create databases
+                env:
+                    DOCTRINE_DEFAULT_HOST: 127.0.0.1
+                    DOCTRINE_REPORT_HOST: 127.0.0.1
+                    PGPASSWORD: gewisdb
+                run: |
+                    ./orm orm:schema-tool:update --force --no-interaction --complete
+                    EM_ALIAS=orm_report ./orm orm:schema-tool:update --force --no-interaction --complete
+
+            -   name: Run PHPStan
+                env:
+                    DOCTRINE_DEFAULT_HOST: 127.0.0.1
+                    DOCTRINE_REPORT_HOST: 127.0.0.1
+                run: |
+                    cp phpstan/phpstan-baseline-temp.neon phpstan/phpstan-baseline-pr.neon
+                    vendor/bin/phpstan analyse -c phpstan.neon --memory-limit 1G --no-progress --error-format=checkstyle | cs2pr
+
+    psalm:
+        name: Psalm
+        runs-on: ubuntu-latest
+
+        steps:
+            -   name: Checkout head branch
+                uses: actions/checkout@v4
+
+            -   name: Install PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: '8.3'
+                    extensions: calendar, curl, intl, opcache, pgsql, pdo_pgsql, zip, memcached, xdebug
+
+            -   name: Extract configuration files
+                run: |
+                    cp config/autoload/doctrine.local.development.php.dist config/autoload/doctrine.local.php
+                    cp config/autoload/laminas-developer-tools.local.php.dist config/autoload/laminas-developer-tools.local.php
+                    cp config/autoload/local.development.php.dist config/autoload/local.php
+
+            -   name: Check out main
+                run: |
+                    git fetch --all
+                    git update-ref refs/heads/temp-psalmpr refs/remotes/origin/main
+                    git checkout --detach temp-psalmpr
+
+            -   name: Install dependencies with Composer
+                uses: ramsey/composer-install@v3
+
+            -   name: Load environment variables
+                uses: c-py/action-dotenv-to-setenv@v3
+                with:
+                    env-file: .env.dist
+            -   name: Generate Psalm Baseline
+                run: |
+                    echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?><files/>" > psalm/psalm-baseline.xml
+                    echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?><files/>" > psalm/psalm-baseline-pr.xml
+                    vendor/bin/psalm --set-baseline=psalm/psalm-baseline-pr.xml --no-diff --no-cache --no-progress || true
+
+            -   name: Check out new branch
+                run: |
+                    git checkout -- psalm/psalm-baseline.xml
+                    git checkout --theirs -- config/modules.config.php
+                    git checkout --theirs -- psalm.xml
+                    git checkout -
+
+            -   name: Install dependencies with Composer
+                uses: ramsey/composer-install@v3
+
+            -   name: Load environment variables
+                uses: c-py/action-dotenv-to-setenv@v3
+                with:
+                    env-file: .env.dist
+
+            -   name: Run Psalm
+                run: |
+                    vendor/bin/psalm  --no-diff --no-cache --no-progress --output-format=github

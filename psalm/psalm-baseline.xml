@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<files psalm-version="5.4.0@62db5d4f6a7ae0a20f7cc5a4952d730272fc0863">
+  <file src="module/Database/src/Service/Meeting.php">
+    <PossiblyUndefinedArrayOffset occurrences="1">
+      <code>$decision[$subDecisionType]</code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="module/Checker/src/Model/TueData.php">
+    <PossiblyUndefinedArrayOffset occurrences="1">
+      <code>$this-&gt;data['registrations']</code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="module/Database/src/Controller/QueryController.php">
+    <InvalidReturnStatement occurrences="1"/>
+    <InvalidReturnType occurrences="1">
+      <code>HttpResponse|ViewModel</code>
+    </InvalidReturnType>
+  </file>
+  <file src="module/Database/src/Form/OrganRegulation.php">
+    <PossiblyInvalidArrayOffset occurrences="1">
+      <code>$option['value']</code>
+    </PossiblyInvalidArrayOffset>
+  </file>
+  <file src="module/Database/src/Service/Stripe.php">
+    <UndefinedMagicPropertyFetch occurrences="3">
+      <code>$event-&gt;data-&gt;object</code>
+      <code>$event-&gt;data-&gt;object</code>
+      <code>$session-&gt;after_expiration-&gt;recovery</code>
+    </UndefinedMagicPropertyFetch>
+  </file>
+  <file src="module/Report/src/Listener/DatabaseUpdateListener.php">
+    <NoValue occurrences="1">
+      <code>$subdecision</code>
+    </NoValue>
+  </file>
+  <file src="module/Report/src/Service/Meeting.php">
+    <InvalidNullableReturnType occurrences="1">
+      <code>ReportMemberModel</code>
+    </InvalidNullableReturnType>
+  </file>
+  <file src="public/index.php">
+    <PossiblyUndefinedArrayOffset occurrences="1">
+      <code>$_SERVER['REQUEST_URI']</code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+</files>

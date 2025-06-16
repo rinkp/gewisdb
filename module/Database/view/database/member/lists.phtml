@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+use Application\View\HelperTrait;
+use Database\Form\MailingList as MailingListForm;
+use Database\Model\{
+    MailingList as MailingListModel,
+    Member as MemberModel,
+};
+use Laminas\View\Renderer\PhpRenderer;
+
+/**
+ * @var PhpRenderer|HelperTrait $this
+ * @var MailingListModel[] $lists
+ * @var MemberModel $member
+ * @var MailingListForm $form
+ */
+?>
+<h1>
+    <?=
+        sprintf(
+            $this->translate('Change Mailing List Subscriptions of %s'),
+            $this->escapeHtml($member->getFullName()),
+        )
+    ?>
+</h1>
+<?php
+$form->prepare();
+
+$form->setAttribute('action', $this->url('member/show/edit/lists', array(
+    'id' => $member->getLidnr()
+)));
+$form->setAttribute('method', 'post');
+
+$form->setAttribute('role', 'form');
+$form->setAttribute('class', 'form-horizontal');
+?>
+<?= $this->form()->openTag($form) ?>
+
+<?php foreach ($lists as $list): ?>
+<div class="form-group">
+<?php
+$element = $form->get('list-' . $list->getName());
+$element->setAttribute('placeholder', $element->getLabel());
+?>
+    <div class="col-sm-12">
+        <div class="checkbox">
+            <label>
+                <?= $this->formCheckbox($element) ?>
+                <?= $element->getLabel() ?>
+            </label>
+            <?= $this->formElementErrors($element) ?>
+        </div>
+    </div>
+</div>
+<?php endforeach ?>
+
+<div class="form-group">
+    <div class="col-sm-12">
+        <?php
+        $submit = $form->get('submit');
+        $submit->setLabel($submit->getValue());
+        $submit->setAttribute('class', 'btn btn-primary');
+        ?>
+        <?= $this->formButton($submit) ?>
+    </div>
+</div>
+<?= $this->form()->closeTag() ?>

@@ -226,3 +226,6 @@ buildnginx:
 
 buildpgadmin:
 		@docker compose build pgadmin
+
+preparemailman:
+		@docker compose cp ./docker/mailman/settings.py mailman-web:/opt/mailman-web/settings.py

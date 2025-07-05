@@ -6,9 +6,9 @@ wget --no-cache "https://github.com/${REPOSITORY}/archive/refs/heads/${BRANCH}.z
 unzip "${BRANCH}.zip"
 rm "${BRANCH}.zip"
 cp -R -u gewisdb-${BRANCH}/public/* /code/public/
-chown -R  www-data:www-data /code/public
+chown -R  php-fpm:php-fpm /code/public
 cp -R -u gewisdb-${BRANCH}/data/* /code/data/
-chown -R  www-data:www-data /code/data
+chown -R  php-fpm:php-fpm /code/data
 rm -R /tmp/gewisdb-${BRANCH}
 cd /code
 if [ "${APP_ENV}" == 'production' ]

@@ -87,9 +87,9 @@ getvendordir:
 replenish:
 		@docker cp ./public "$(shell docker compose ps -q web)":/code
 		@docker cp ./module "$(shell docker compose ps -q web)":/code
-		@docker compose exec web chown -R www-data:www-data /code/public
+		@docker compose exec web chown -R php-fpm:php-fpm /code/public
 		@docker cp ./data "$(shell docker compose ps -q web)":/code
-		@docker compose exec web chown -R www-data:www-data /code/data
+		@docker compose exec web chown -R php-fpm:php-fpm /code/data
 		@docker compose exec web rm -rf data/cache/module-config-cache.application.config.cache.php
 		@docker compose exec web composer dump-autoload --dev
 		@docker compose exec web ./orm orm:generate-proxies
